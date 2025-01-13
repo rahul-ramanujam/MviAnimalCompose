@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MVIAnimalCompose</string>
+    <string name="fetch_animals">Fetch Animals</string>
 </resources>
