@@ -17,22 +17,28 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberAsyncImagePainter
 import com.rahulrv.mvianimalcompose.api.AnimalService
@@ -74,6 +80,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(viewModel: MainViewModel, onButtonClick: () -> Unit) {
     val state = viewModel.state.value
 
+
     when (state) {
         is MainState.Idle -> IdleScreen(onButtonClick)
         is MainState.Loading -> LoadingScreen()
@@ -113,8 +120,8 @@ fun LoadingScreen() {
 @Composable
 fun AnimalListScreen(animals: List<Animal>) {
     LazyColumn {
-        items(items = animals) {
-            AnimalItem(animalItem = it)
+        itemsIndexed(items = animals) { index, animal ->
+            AnimalItem(animalItem = animal, index = index, index == 0, index == animals.size - 1)
             HorizontalDivider(
                 color = Color.Gray,
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
@@ -125,21 +132,77 @@ fun AnimalListScreen(animals: List<Animal>) {
 
 
 @Composable
-fun AnimalItem(animalItem: Animal) {
-    Row(modifier = Modifier.fillMaxWidth().height(100.dp)) {
-        val url = AnimalService.BASE_URL + animalItem.image
-        val painter = rememberAsyncImagePainter(model = url)
+fun AnimalItem(animalItem: Animal, index: Int, isFirst: Boolean, isLast: Boolean) {
+    val measuredText = rememberTextMeasurer()
 
-        Image(
-            painter = painter,
-            contentDescription = null,
-            modifier = Modifier.size(100.dp),
-            contentScale = ContentScale.FillHeight
-        )
+    Box(
+        modifier = Modifier
+            .drawWithCache {
+                onDrawBehind {
+                    val textLayoutResult = measuredText.measure(
+                        "ANIMAL",
+                        style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                    )
+                    val textLayoutResultIndex = measuredText.measure(
+                        index.toString().padStart(2, '0'),
+                        style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                    )
 
-        Column(modifier = Modifier.fillMaxSize().padding(start = 4.dp)) {
-            Text(text = animalItem.name, fontWeight = FontWeight.Bold)
-            Text(text = animalItem.location)
+                    val centerX = textLayoutResult.size.width.toFloat() / 2
+                    if (!isFirst) {
+                        drawLine(
+                            color = Color.Red,
+                            start = Offset(centerX, 0f),
+                            end = Offset(centerX, size.height / 2 - 18.sp.toPx() - 10),
+                            strokeWidth = 4f
+                        )
+
+                    }
+                    drawText(
+                        textLayoutResult = textLayoutResult,
+                        color = Color.Red,
+                        topLeft = Offset(centerX / 4, size.height / 2 - 18.sp.toPx())
+                    )
+                    drawText(
+                        textLayoutResult = textLayoutResultIndex,
+                        color = Color.Red,
+                        topLeft = Offset(centerX - textLayoutResultIndex.size.width.toFloat()/2, size.height / 2)
+                    )
+                    if (!isLast) {
+                        drawLine(
+                            color = Color.Red,
+                            start = Offset(centerX, size.height / 2 + 60f),
+                            end = Offset(centerX, size.height),
+                            strokeWidth = 4f
+                        )
+                    }
+                }
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(start = 100.dp)
+                .fillMaxWidth()
+                .height(100.dp)
+        ) {
+            val url = AnimalService.BASE_URL + animalItem.image
+            val painter = rememberAsyncImagePainter(model = url)
+
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier.size(100.dp),
+                contentScale = ContentScale.FillHeight
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 4.dp)
+            ) {
+                Text(text = animalItem.name, fontWeight = FontWeight.Bold)
+                Text(text = animalItem.location)
+            }
         }
     }
 }
